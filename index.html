@@ -53,7 +53,30 @@
 
   <section id="categoryGrid" class="category-grid"></section>
 
-  <button id="allQuestionsBtn" class="all-questions-btn">すべての問題から出題</button>
+  <div class="home-bottom-actions">
+    <button id="grammarReferenceBtn" class="reference-btn">📘 文法資料</button>
+    <button id="allQuestionsBtn" class="all-questions-btn">すべての問題から出題</button>
+  </div>
+</main>
+
+
+<!-- ===== 文法資料 ===== -->
+<main id="referenceView" class="app reference hidden">
+  <header class="reference-header">
+    <button id="referenceHomeBtn" class="back-home">⌂ トップ</button>
+    <div class="reference-title-wrap">
+      <div class="eyebrow">講義・復習用</div>
+      <h1>文法資料</h1>
+    </div>
+    <div class="reference-spacer"></div>
+  </header>
+
+  <section class="reference-intro">
+    分類・意味・代表例・見分け方をまとめた講義用資料です。
+  </section>
+
+  <nav id="referenceCategoryNav" class="reference-nav"></nav>
+  <section id="referenceContent" class="reference-content"></section>
 </main>
 
 <!-- ===== 問題画面 ===== -->
@@ -151,6 +174,7 @@
 </dialog>
 
 <script src="data.js"></script>
+<script src="lecture-data.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

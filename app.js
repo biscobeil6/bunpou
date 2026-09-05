@@ -25,8 +25,8 @@
   all.forEach(q => q.category = CATEGORY_MAP[q.major] || q.major);
 
   const els = {
-    homeView:$("#homeView"), quizView:$("#quizView"),
-    categoryGrid:$("#categoryGrid"), allQuestionsBtn:$("#allQuestionsBtn"),
+    homeView:$("#homeView"), quizView:$("#quizView"), referenceView:$("#referenceView"),
+    categoryGrid:$("#categoryGrid"), allQuestionsBtn:$("#allQuestionsBtn"), grammarReferenceBtn:$("#grammarReferenceBtn"), referenceHomeBtn:$("#referenceHomeBtn"), referenceCategoryNav:$("#referenceCategoryNav"), referenceContent:$("#referenceContent"),
     homeAnswered:$("#homeAnswered"), homeWrong:$("#homeWrong"),
     homeResult:$("#homeResultFilter"), homeDifficulty:$("#homeDifficultyFilter"),
     settingsBtnHome:$("#settingsBtnHome"), settingsBtnQuiz:$("#settingsBtnQuiz"),
@@ -70,6 +70,7 @@
 
   function showHome(){
     els.quizView.classList.add("hidden");
+    els.referenceView.classList.add("hidden");
     els.homeView.classList.remove("hidden");
     activeCategory="";
     state.category="";
@@ -85,8 +86,72 @@
     saveState();
     applyFilters(false);
     els.homeView.classList.add("hidden");
+    els.referenceView.classList.add("hidden");
     els.quizView.classList.remove("hidden");
     requestAnimationFrame(()=>{resizeCanvas();window.scrollTo({top:0,behavior:"instant"});});
+  }
+
+
+  function renderReference(){
+    const data = window.GRAMMAR_LECTURE || [];
+    const majors = [...new Set(data.map(x=>x.major))];
+
+    els.referenceCategoryNav.innerHTML = "";
+    els.referenceContent.innerHTML = "";
+
+    majors.forEach((major, idx)=>{
+      const nav = document.createElement("button");
+      nav.className = "ref-nav-btn" + (idx===0 ? " active" : "");
+      nav.textContent = major;
+      nav.addEventListener("click", ()=>{
+        document.querySelectorAll(".ref-nav-btn").forEach(b=>b.classList.remove("active"));
+        nav.classList.add("active");
+        document.getElementById("ref-" + idx)?.scrollIntoView({behavior:"smooth", block:"start"});
+      });
+      els.referenceCategoryNav.appendChild(nav);
+
+      const section = document.createElement("section");
+      section.className = "ref-section";
+      section.id = "ref-" + idx;
+
+      const h = document.createElement("h2");
+      h.className = "ref-section-title";
+      h.textContent = major;
+      section.appendChild(h);
+
+      const grid = document.createElement("div");
+      grid.className = "ref-card-grid";
+
+      data.filter(x=>x.major===major).forEach(x=>{
+        const card = document.createElement("article");
+        card.className = "ref-card";
+        const impClass = x.importance==="A" ? " imp-a" : "";
+        card.innerHTML = `
+          <div class="ref-card-head">
+            <div class="ref-item">${x.item}</div>
+            <span class="ref-importance${impClass}">重要度 ${x.importance}</span>
+          </div>
+          <div class="ref-label">それが何か</div>
+          <div class="ref-text">${x.description}</div>
+          <div class="ref-label">代表例</div>
+          <div class="ref-example">${x.example}</div>
+          <div class="ref-label">押さえるポイント</div>
+          <div class="ref-text">${x.point}</div>
+        `;
+        grid.appendChild(card);
+      });
+
+      section.appendChild(grid);
+      els.referenceContent.appendChild(section);
+    });
+  }
+
+  function showReference(){
+    els.homeView.classList.add("hidden");
+    els.quizView.classList.add("hidden");
+    els.referenceView.classList.remove("hidden");
+    renderReference();
+    window.scrollTo({top:0,behavior:"instant"});
   }
 
   function resultMatch(q){
@@ -332,6 +397,8 @@
   }
 
   els.allQuestionsBtn.addEventListener("click",()=>showQuiz(""));
+  els.grammarReferenceBtn.addEventListener("click",showReference);
+  els.referenceHomeBtn.addEventListener("click",showHome);
   els.homeBtn.addEventListener("click",showHome);
   els.settingsBtnHome.addEventListener("click",openSettings);
   els.settingsBtnQuiz.addEventListener("click",openSettings);
