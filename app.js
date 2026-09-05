@@ -25,216 +25,225 @@
   all.forEach(q => q.category = CATEGORY_MAP[q.major] || q.major);
 
   const els = {
-    progress: $("#progress"), meta: $("#meta"), doneCount: $("#doneCount"),
-    wrongCount: $("#wrongCount"), unansweredCount: $("#unansweredCount"),
-    questionId: $("#questionId"), question: $("#question"), answerCard: $("#answerCard"),
-    answer: $("#answer"), explanation: $("#explanation"), answerBtn: $("#answerBtn"),
-    prevBtn: $("#prevBtn"), nextBtn: $("#nextBtn"), clearBtn: $("#clearBtn"), pad: $("#pad"),
-    writeLabel: $("#writeLabel"),
-    correctBtn: $("#correctBtn"), wrongBtn: $("#wrongBtn"), judgeState: $("#judgeState"),
-    settings: $("#settings"), settingsBtn: $("#settingsBtn"),
-    category: $("#categoryFilter"), major: $("#majorFilter"),
-    difficulty: $("#difficultyFilter"), result: $("#resultFilter"),
-    priority: $("#priorityFilter"), shuffle: $("#shuffleToggle"),
-    apply: $("#applyBtn"), reset: $("#resetProgressBtn"),
-    categoryProgress: $("#categoryProgress"),
-    categoryButtons: $("#categoryButtons"),
-    topResult: $("#topResultFilter"),
-    topDifficulty: $("#topDifficultyFilter")
+    homeView:$("#homeView"), quizView:$("#quizView"),
+    categoryGrid:$("#categoryGrid"), allQuestionsBtn:$("#allQuestionsBtn"),
+    homeAnswered:$("#homeAnswered"), homeWrong:$("#homeWrong"),
+    homeResult:$("#homeResultFilter"), homeDifficulty:$("#homeDifficultyFilter"),
+    settingsBtnHome:$("#settingsBtnHome"), settingsBtnQuiz:$("#settingsBtnQuiz"),
+    homeBtn:$("#homeBtn"),
+
+    progress:$("#progress"), meta:$("#meta"), doneCount:$("#doneCount"),
+    wrongCount:$("#wrongCount"), unansweredCount:$("#unansweredCount"),
+    questionId:$("#questionId"), question:$("#question"),
+    answerCard:$("#answerCard"), answer:$("#answer"), explanation:$("#explanation"),
+    answerBtn:$("#answerBtn"), prevBtn:$("#prevBtn"), nextBtn:$("#nextBtn"),
+    clearBtn:$("#clearBtn"), pad:$("#pad"), writeLabel:$("#writeLabel"),
+    templateText:$("#templateText"),
+    correctBtn:$("#correctBtn"), wrongBtn:$("#wrongBtn"), judgeState:$("#judgeState"),
+
+    settings:$("#settings"), major:$("#majorFilter"), priority:$("#priorityFilter"),
+    shuffle:$("#shuffleToggle"), apply:$("#applyBtn"), reset:$("#resetProgressBtn"),
+    categoryProgress:$("#categoryProgress")
   };
 
-  const STORAGE = "kokugoGrammarAppV3";
-  const LEGACY_V2 = "kokugoGrammarAppV2";
-  const LEGACY_V1 = "kokugoGrammarAppV1";
-  let state = loadState();
-  let filtered = [];
-  let index = 0;
-  let ctx, drawing = false, lastX = 0, lastY = 0;
-  let templateText = "";
+  const STORAGE="kokugoGrammarAppV4";
+  const LEGACY=["kokugoGrammarAppV3","kokugoGrammarAppV2","kokugoGrammarAppV1"];
+  let state=loadState();
+  let filtered=[], index=0, ctx, drawing=false, lastX=0,lastY=0;
+  let activeCategory="";
 
-  function loadState() {
-    try {
-      let old = {};
-      try { old = JSON.parse(localStorage.getItem(LEGACY_V2) || "{}"); } catch(e) {}
-      if (!Object.keys(old).length) {
-        try { old = JSON.parse(localStorage.getItem(LEGACY_V1) || "{}"); } catch(e) {}
-      }
-      const current = JSON.parse(localStorage.getItem(STORAGE) || "{}");
-      return Object.assign({
-        category:"", major:"", difficulty:"", result:"", priority:"",
-        shuffle:false, currentId:"GQ00001", results:{}
-      }, old, current);
-    } catch(e) {
-      return {category:"",major:"",difficulty:"",result:"",priority:"",shuffle:false,currentId:"GQ00001",results:{}};
+  function loadState(){
+    let merged={category:"",major:"",difficulty:"",result:"",priority:"",shuffle:false,currentId:"GQ00001",results:{}};
+    for(const key of LEGACY){
+      try{
+        const old=JSON.parse(localStorage.getItem(key)||"{}");
+        if(Object.keys(old).length){ merged=Object.assign(merged,old); break; }
+      }catch(e){}
     }
+    try{
+      merged=Object.assign(merged,JSON.parse(localStorage.getItem(STORAGE)||"{}"));
+    }catch(e){}
+    return merged;
   }
-  function saveState() { localStorage.setItem(STORAGE, JSON.stringify(state)); }
-  function statusOf(id) { return state.results[id] || ""; }
+  function saveState(){localStorage.setItem(STORAGE,JSON.stringify(state))}
+  function statusOf(id){return state.results[id]||""}
 
-  function buildControls() {
-    // トップ分類ボタン
-    const allBtn = document.createElement("button");
-    allBtn.className = "catbtn";
-    allBtn.dataset.category = "";
-    allBtn.textContent = "すべて";
-    els.categoryButtons.appendChild(allBtn);
-    CATEGORY_ORDER.forEach(v => {
-      const b = document.createElement("button");
-      b.className = "catbtn";
-      b.dataset.category = v;
-      b.textContent = v;
-      els.categoryButtons.appendChild(b);
-    });
-    els.categoryButtons.addEventListener("click", e => {
-      const b = e.target.closest(".catbtn");
-      if (!b) return;
-      state.category = b.dataset.category;
-      state.major = "";
-      saveState();
-      syncControls();
-      applyFilters(false);
-    });
-
-    CATEGORY_ORDER.forEach(v => {
-      const o = document.createElement("option");
-      o.value = v; o.textContent = v; els.category.appendChild(o);
-    });
-    syncControls();
+  function showHome(){
+    els.quizView.classList.add("hidden");
+    els.homeView.classList.remove("hidden");
+    activeCategory="";
+    state.category="";
+    state.major="";
+    saveState();
+    renderHome();
+    window.scrollTo({top:0,behavior:"instant"});
+  }
+  function showQuiz(category){
+    activeCategory=category||"";
+    state.category=activeCategory;
+    state.major="";
+    saveState();
+    applyFilters(false);
+    els.homeView.classList.add("hidden");
+    els.quizView.classList.remove("hidden");
+    requestAnimationFrame(()=>{resizeCanvas();window.scrollTo({top:0,behavior:"instant"});});
   }
 
-  function syncControls() {
-    els.category.value = state.category || "";
-    els.topResult.value = state.result || "";
-    els.topDifficulty.value = state.difficulty || "";
-    els.difficulty.value = state.difficulty || "";
-    els.result.value = state.result || "";
-    els.priority.value = state.priority || "";
-    els.shuffle.checked = !!state.shuffle;
-    refreshMajorOptions();
-
-    document.querySelectorAll(".catbtn").forEach(b => {
-      b.classList.toggle("active", b.dataset.category === (state.category || ""));
-    });
-  }
-
-  function refreshMajorOptions() {
-    const selected = state.major || "";
-    els.major.innerHTML = '<option value="">すべて</option>';
-    const majors = [...new Set(all
-      .filter(q => !state.category || q.category === state.category)
-      .map(q => q.major))];
-    majors.forEach(v => {
-      const o = document.createElement("option");
-      o.value = v; o.textContent = v; els.major.appendChild(o);
-    });
-    if (majors.includes(selected)) els.major.value = selected;
-  }
-
-  function shuffled(arr) {
-    const copy = [...arr];
-    for (let i=copy.length-1;i>0;i--) {
-      const j=Math.floor(Math.random()*(i+1));
-      [copy[i],copy[j]]=[copy[j],copy[i]];
-    }
-    return copy;
-  }
-  function resultMatch(q) {
+  function resultMatch(q){
     const s=statusOf(q.id);
-    if (!state.result) return true;
-    if (state.result==="unanswered") return !s;
+    if(!state.result)return true;
+    if(state.result==="unanswered")return !s;
     return s===state.result;
   }
 
-  function applyFilters(preserveCurrent=true) {
-    const currentId = preserveCurrent && filtered[index] ? filtered[index].id : state.currentId;
-    filtered = all.filter(q =>
-      (!state.category || q.category===state.category) &&
-      (!state.major || q.major===state.major) &&
-      (!state.difficulty || q.difficulty===state.difficulty) &&
-      (!state.priority || q.kyotoPriority===state.priority) &&
+  function applyFilters(preserveCurrent=true){
+    const currentId=preserveCurrent&&filtered[index]?filtered[index].id:state.currentId;
+    filtered=all.filter(q=>
+      (!activeCategory||q.category===activeCategory)&&
+      (!state.major||q.major===state.major)&&
+      (!state.difficulty||q.difficulty===state.difficulty)&&
+      (!state.priority||q.kyotoPriority===state.priority)&&
       resultMatch(q)
     );
-    if (state.shuffle) filtered=shuffled(filtered);
+    if(state.shuffle){
+      filtered=[...filtered];
+      for(let i=filtered.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [filtered[i],filtered[j]]=[filtered[j],filtered[i]];
+      }
+    }
     const found=filtered.findIndex(q=>q.id===currentId);
     index=found>=0?found:0;
-    render();
+    renderQuiz();
     renderCategoryProgress();
   }
 
-  function updateGlobalCounts() {
+  function counts(arr){
     let correct=0,wrong=0;
-    all.forEach(q=>{
+    arr.forEach(q=>{
       const s=statusOf(q.id);
-      if(s==="correct") correct++;
-      if(s==="wrong") wrong++;
+      if(s==="correct")correct++;
+      if(s==="wrong")wrong++;
     });
-    els.doneCount.textContent=`できた ${correct}`;
-    els.wrongCount.textContent=`できなかった ${wrong}`;
-    els.unansweredCount.textContent=`未回答 ${all.length-correct-wrong}`;
+    return {correct,wrong,answered:correct+wrong,total:arr.length};
   }
 
-  function renderCategoryProgress() {
-    els.categoryProgress.innerHTML="";
+  function renderHome(){
+    els.homeResult.value=state.result||"";
+    els.homeDifficulty.value=state.difficulty||"";
+    const total=counts(all);
+    els.homeAnswered.textContent=`完了 ${total.answered}`;
+    els.homeWrong.textContent=`できなかった ${total.wrong}`;
+
+    els.categoryGrid.innerHTML="";
     CATEGORY_ORDER.forEach(cat=>{
       const arr=all.filter(q=>q.category===cat);
-      let correct=0,wrong=0;
-      arr.forEach(q=>{
-        const s=statusOf(q.id);
-        if(s==="correct") correct++;
-        if(s==="wrong") wrong++;
-      });
-      const answered=correct+wrong;
-      const pct=arr.length?Math.round(answered/arr.length*100):0;
+      const c=counts(arr);
+      const pct=c.total?Math.round(c.answered/c.total*100):0;
+      const btn=document.createElement("button");
+      btn.className="category-card";
+      btn.innerHTML=`
+        <div class="category-name">${cat}</div>
+        <div class="category-stats">
+          ${c.total}問<br>
+          完了 ${c.answered}問<br>
+          できなかった ${c.wrong}問
+          <div class="bar"><span style="width:${pct}%"></span></div>
+        </div>`;
+      btn.addEventListener("click",()=>showQuiz(cat));
+      els.categoryGrid.appendChild(btn);
+    });
+  }
+
+  function updateGlobalCounts(){
+    const c=counts(all);
+    els.doneCount.textContent=`できた ${c.correct}`;
+    els.wrongCount.textContent=`できなかった ${c.wrong}`;
+    els.unansweredCount.textContent=`未回答 ${c.total-c.answered}`;
+  }
+
+  function renderCategoryProgress(){
+    els.categoryProgress.innerHTML="";
+    CATEGORY_ORDER.forEach(cat=>{
+      const arr=all.filter(q=>q.category===cat),c=counts(arr);
+      const pct=c.total?Math.round(c.answered/c.total*100):0;
       const row=document.createElement("div");
       row.className="progress-row";
       row.innerHTML=`
         <div class="progress-name">${cat}</div>
-        <div class="progress-numbers">完了 ${answered}/${arr.length}・✕ ${wrong}</div>
+        <div class="progress-numbers">完了 ${c.answered}/${c.total}・✕ ${c.wrong}</div>
         <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
       els.categoryProgress.appendChild(row);
     });
     updateGlobalCounts();
   }
 
-  function renderJudge(q) {
+  function refreshMajorOptions(){
+    const selected=state.major||"";
+    els.major.innerHTML='<option value="">すべて</option>';
+    const majors=[...new Set(all.filter(q=>!activeCategory||q.category===activeCategory).map(q=>q.major))];
+    majors.forEach(v=>{
+      const o=document.createElement("option");
+      o.value=v;o.textContent=v;els.major.appendChild(o);
+    });
+    if(majors.includes(selected))els.major.value=selected;
+  }
+
+  function renderJudge(q){
     const s=statusOf(q.id);
     els.correctBtn.classList.toggle("selected",s==="correct");
     els.wrongBtn.classList.toggle("selected",s==="wrong");
     els.judgeState.textContent=s==="correct"?"記録：できた":s==="wrong"?"記録：できなかった":"";
   }
 
-  // 「区切って／を入れる」問題から元文だけを取り出し、記載欄に印字
-  function extractTemplateText(q) {
-    if (!q) return "";
-    const isSplit = /区切り[、,]?「?／」?を入れて/.test(q.question) ||
-                    /単語に区切り/.test(q.question) ||
-                    /文節に区切り/.test(q.question);
-    if (!isSplit) return "";
-    const quoted = [...q.question.matchAll(/「([^」]+)」/g)].map(m=>m[1]);
-    if (!quoted.length) return "";
-    // 最後の引用が問題文中の対象文であることが多い
-    let t = quoted[quoted.length-1];
-    if (t === "／") return "";
-    return t;
+  function extractTemplateText(q){
+    if(!q)return "";
+    // 「単語/文節に区切り、『／』を入れて」タイプを幅広く拾う
+    const splitInstruction =
+      q.question.includes("「／」を入れて") ||
+      q.question.includes("／」を入れて") ||
+      /単語に区切/.test(q.question) ||
+      /文節に区切/.test(q.question);
+    if(!splitInstruction)return "";
+
+    const quoted=[...q.question.matchAll(/「([^」]+)」/g)].map(m=>m[1]);
+    const candidates=quoted.filter(t=>t!=="／" && t.length>=2);
+    if(!candidates.length)return "";
+
+    // 最後の引用が対象文である設計
+    return candidates[candidates.length-1];
   }
 
-  function render() {
+  function renderTemplate(q){
+    const t=extractTemplateText(q);
+    if(t){
+      els.templateText.textContent=t;
+      els.templateText.classList.remove("hidden");
+      els.writeLabel.textContent="文に「／」を書き込む";
+    }else{
+      els.templateText.textContent="";
+      els.templateText.classList.add("hidden");
+      els.writeLabel.textContent="ここに書く";
+    }
+  }
+
+  function renderQuiz(){
     updateGlobalCounts();
     if(!filtered.length){
       els.progress.textContent="0 / 0";
       els.meta.textContent="該当問題なし";
       els.questionId.textContent="";
-      els.question.textContent="条件に合う問題がありません。トップの分類・学習記録か、歯車の設定を変更してください。";
+      els.question.textContent="この条件に合う問題はありません。トップへ戻って条件を変更してください。";
       els.answerCard.classList.add("hidden");
       els.prevBtn.disabled=els.nextBtn.disabled=els.answerBtn.disabled=true;
-      templateText="";
+      els.templateText.classList.add("hidden");
       clearPad();
       return;
     }
     const q=filtered[index];
-    state.currentId=q.id; saveState();
+    state.currentId=q.id;saveState();
     els.progress.textContent=`${index+1} / ${filtered.length}`;
-    els.meta.textContent=`${q.category} ・ ${q.difficulty} ・ 京都${q.kyotoPriority}`;
+    els.meta.textContent=`${q.difficulty} ・ ${q.category} ・ 京都${q.kyotoPriority}`;
     els.questionId.textContent=`${q.id} / ${q.grammarId} / ${q.major}`;
     els.question.textContent=q.question;
     els.answer.textContent=q.answer;
@@ -244,23 +253,21 @@
     els.prevBtn.disabled=index===0;
     els.nextBtn.disabled=index===filtered.length-1;
     els.answerBtn.disabled=false;
-
-    templateText=extractTemplateText(q);
-    els.writeLabel.textContent=templateText ? "文に「／」を書き込む" : "ここに書く";
-
     renderJudge(q);
+    renderTemplate(q);
     clearPad();
   }
 
   function showAnswer(){
-    if(!filtered.length) return;
+    if(!filtered.length)return;
     els.answerCard.classList.remove("hidden");
     els.answerBtn.textContent="答え表示中";
     renderJudge(filtered[index]);
-    requestAnimationFrame(()=>els.answerCard.scrollIntoView({behavior:"smooth",block:"nearest"}));
+    // 自動スクロールはしない。iPadで上下位置が飛ばないよう固定。
   }
+
   function judge(result){
-    if(!filtered.length) return;
+    if(!filtered.length)return;
     state.results[filtered[index].id]=result;
     saveState();
     renderJudge(filtered[index]);
@@ -269,62 +276,30 @@
   function go(delta){
     const ni=index+delta;
     if(ni<0||ni>=filtered.length)return;
-    index=ni; render();
+    index=ni;renderQuiz();
   }
 
   function setupCanvas(){
     ctx=els.pad.getContext("2d",{alpha:true});
-    resizeCanvas();
     window.addEventListener("resize",resizeCanvas);
     els.pad.addEventListener("pointerdown",startDraw);
     els.pad.addEventListener("pointermove",draw);
     els.pad.addEventListener("pointerup",endDraw);
     els.pad.addEventListener("pointercancel",endDraw);
-    els.pad.addEventListener("pointerleave",e=>{if(drawing&&e.pointerType==="mouse")endDraw();});
+    els.pad.addEventListener("pointerleave",e=>{if(drawing&&e.pointerType==="mouse")endDraw()});
   }
   function configureContext(){
     const dpr=Math.max(1,window.devicePixelRatio||1);
     ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.lineCap="round";ctx.lineJoin="round";
-    ctx.strokeStyle="#2d2932";ctx.lineWidth=3.0;
+    ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#2d2932";ctx.lineWidth=3;
   }
   function resizeCanvas(){
-    if(!ctx)return;
-    const c=els.pad,r=c.getBoundingClientRect(),dpr=Math.max(1,window.devicePixelRatio||1);
-    c.width=Math.floor(r.width*dpr);c.height=Math.floor(r.height*dpr);
-    ctx=c.getContext("2d");
-    configureContext();
-    renderTemplate();
-  }
-  function renderTemplate(){
-    if(!ctx)return;
     const r=els.pad.getBoundingClientRect();
-    ctx.clearRect(0,0,r.width,r.height);
-    // うっすら罫線
-    ctx.save();
-    ctx.strokeStyle="#f0edf4";ctx.lineWidth=1;
-    for(let y=38;y<r.height;y+=38){
-      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(r.width,y);ctx.stroke();
-    }
-    if(templateText){
-      ctx.fillStyle="#55515d";
-      ctx.font='600 24px -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif';
-      ctx.textBaseline="middle";
-      const maxWidth=r.width-32;
-      // 1行に収まらなければ文字単位で2行へ
-      let line="", lines=[];
-      for(const ch of templateText){
-        const test=line+ch;
-        if(ctx.measureText(test).width>maxWidth && line){
-          lines.push(line);line=ch;
-        }else line=test;
-      }
-      if(line)lines.push(line);
-      const lineHeight=38;
-      const startY=Math.max(28,(r.height-(lines.length-1)*lineHeight)/2);
-      lines.slice(0,3).forEach((ln,i)=>ctx.fillText(ln,16,startY+i*lineHeight,maxWidth));
-    }
-    ctx.restore();
+    if(!r.width||!r.height)return;
+    const dpr=Math.max(1,window.devicePixelRatio||1);
+    els.pad.width=Math.floor(r.width*dpr);
+    els.pad.height=Math.floor(r.height*dpr);
+    ctx=els.pad.getContext("2d",{alpha:true});
     configureContext();
   }
   function point(e){
@@ -332,19 +307,41 @@
     return[e.clientX-r.left,e.clientY-r.top];
   }
   function startDraw(e){
-    e.preventDefault();
-    els.pad.setPointerCapture?.(e.pointerId);
+    e.preventDefault();els.pad.setPointerCapture?.(e.pointerId);
     drawing=true;[lastX,lastY]=point(e);
   }
   function draw(e){
-    if(!drawing)return;
-    e.preventDefault();
+    if(!drawing)return;e.preventDefault();
     const[x,y]=point(e);
     ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(x,y);ctx.stroke();
     lastX=x;lastY=y;
   }
-  function endDraw(){drawing=false;}
-  function clearPad(){renderTemplate();}
+  function endDraw(){drawing=false}
+  function clearPad(){
+    if(!ctx)return;
+    const r=els.pad.getBoundingClientRect();
+    ctx.clearRect(0,0,r.width,r.height);
+  }
+
+  function openSettings(){
+    refreshMajorOptions();
+    els.priority.value=state.priority||"";
+    els.shuffle.checked=!!state.shuffle;
+    renderCategoryProgress();
+    els.settings.showModal();
+  }
+
+  els.allQuestionsBtn.addEventListener("click",()=>showQuiz(""));
+  els.homeBtn.addEventListener("click",showHome);
+  els.settingsBtnHome.addEventListener("click",openSettings);
+  els.settingsBtnQuiz.addEventListener("click",openSettings);
+
+  els.homeResult.addEventListener("change",()=>{
+    state.result=els.homeResult.value;saveState();renderHome();
+  });
+  els.homeDifficulty.addEventListener("change",()=>{
+    state.difficulty=els.homeDifficulty.value;saveState();renderHome();
+  });
 
   els.answerBtn.addEventListener("click",showAnswer);
   els.prevBtn.addEventListener("click",()=>go(-1));
@@ -353,37 +350,21 @@
   els.correctBtn.addEventListener("click",()=>judge("correct"));
   els.wrongBtn.addEventListener("click",()=>judge("wrong"));
 
-  els.topResult.addEventListener("change",()=>{
-    state.result=els.topResult.value;saveState();syncControls();applyFilters(false);
-  });
-  els.topDifficulty.addEventListener("change",()=>{
-    state.difficulty=els.topDifficulty.value;saveState();syncControls();applyFilters(false);
-  });
-
-  els.settingsBtn.addEventListener("click",()=>{
-    syncControls();renderCategoryProgress();els.settings.showModal();
-  });
-  els.category.addEventListener("change",()=>{
-    state.category=els.category.value;state.major="";refreshMajorOptions();
-  });
-
   els.apply.addEventListener("click",()=>{
-    state.category=els.category.value;
     state.major=els.major.value;
-    state.difficulty=els.difficulty.value;
-    state.result=els.result.value;
     state.priority=els.priority.value;
     state.shuffle=els.shuffle.checked;
-    saveState();syncControls();applyFilters(false);
+    saveState();
+    if(!els.quizView.classList.contains("hidden"))applyFilters(false);
+    renderHome();
   });
 
   els.reset.addEventListener("click",()=>{
     if(!confirm("「できた／できなかった」の学習記録をすべて消しますか？"))return;
     state.results={};state.result="";
-    saveState();syncControls();applyFilters(true);
+    saveState();renderHome();renderCategoryProgress();
   });
 
-  buildControls();
   setupCanvas();
-  applyFilters(true);
+  showHome();
 })();

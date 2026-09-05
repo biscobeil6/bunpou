@@ -8,37 +8,70 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main class="app">
-  <header class="topbar">
+
+<!-- ===== トップ画面 ===== -->
+<main id="homeView" class="home app">
+  <header class="home-header">
     <div>
       <div class="eyebrow">京都府公立高校入試対策</div>
       <h1>中3 国語文法</h1>
     </div>
-    <button id="settingsBtn" class="settings-link" aria-label="詳細設定"><span class="gear">⚙</span><span>詳細設定</span></button>
+    <button id="settingsBtnHome" class="settings-link" aria-label="詳細設定">
+      <span class="gear">⚙</span><span>詳細設定</span>
+    </button>
   </header>
 
-  <!-- よく使う設定はトップに常設 -->
-  <section class="quick-controls">
-    <div class="quick-row category-scroll" id="categoryButtons"></div>
-    <div class="quick-row">
-      <select id="topResultFilter" class="quick-select" aria-label="学習記録">
-        <option value="">すべての問題</option>
-        <option value="unanswered">未回答だけ</option>
-        <option value="wrong">できなかった問題だけ</option>
-        <option value="correct">できただけ</option>
-      </select>
-      <select id="topDifficultyFilter" class="quick-select" aria-label="難易度">
-        <option value="">全難易度</option>
-        <option value="基礎">基礎</option>
-        <option value="標準">標準</option>
-        <option value="入試">入試</option>
-      </select>
+  <section class="home-summary">
+    <div class="summary-main">
+      <span>全747問</span>
+      <span id="homeAnswered">完了 0</span>
+      <span id="homeWrong">できなかった 0</span>
+    </div>
+    <div class="home-filter-row">
+      <label>
+        学習する問題
+        <select id="homeResultFilter">
+          <option value="">すべて</option>
+          <option value="unanswered">未回答だけ</option>
+          <option value="wrong">できなかった問題だけ</option>
+          <option value="correct">できただけ</option>
+        </select>
+      </label>
+      <label>
+        難易度
+        <select id="homeDifficultyFilter">
+          <option value="">すべて</option>
+          <option value="基礎">基礎</option>
+          <option value="標準">標準</option>
+          <option value="入試">入試</option>
+        </select>
+      </label>
     </div>
   </section>
 
+  <h2 class="choose-title">分野を選んでください</h2>
+
+  <section id="categoryGrid" class="category-grid"></section>
+
+  <button id="allQuestionsBtn" class="all-questions-btn">すべての問題から出題</button>
+</main>
+
+<!-- ===== 問題画面 ===== -->
+<main id="quizView" class="app quiz hidden">
+  <header class="quiz-header">
+    <button id="homeBtn" class="back-home">⌂ トップ</button>
+    <div class="quiz-title-wrap">
+      <div class="eyebrow">京都府公立高校入試対策</div>
+      <h1>中3 国語文法</h1>
+    </div>
+    <button id="settingsBtnQuiz" class="settings-link" aria-label="詳細設定">
+      <span class="gear">⚙</span><span>詳細設定</span>
+    </button>
+  </header>
+
   <section class="status">
     <span id="progress">1 / 747</span>
-    <span id="meta">文・文節・単語 ・ 基礎</span>
+    <span id="meta">基礎 ・ 文・文節・単語</span>
   </section>
 
   <section class="mini-progress">
@@ -57,14 +90,16 @@
       <span id="writeLabel">ここに書く</span>
       <button id="clearBtn" class="textbtn">消す</button>
     </div>
-    <canvas id="pad" aria-label="手書き回答欄"></canvas>
+    <div class="pad-wrap">
+      <div id="templateText" class="template-text hidden"></div>
+      <canvas id="pad" aria-label="手書き回答欄"></canvas>
+    </div>
   </section>
 
   <section id="answerCard" class="card answer-card hidden">
     <div class="answer-label">答え</div>
     <div id="answer" class="answer"></div>
     <div id="explanation" class="explanation"></div>
-
     <div class="judge-actions">
       <button id="correctBtn" class="judge correct">✓ できた</button>
       <button id="wrongBtn" class="judge wrong">✕ できなかった</button>
@@ -79,39 +114,16 @@
   </section>
 </main>
 
+<!-- ===== 詳細設定 ===== -->
 <dialog id="settings">
   <form method="dialog" class="settings-panel">
     <div class="settings-title">
-      <h2>細かい設定</h2>
+      <h2>詳細設定</h2>
       <button class="iconbtn" value="cancel" aria-label="閉じる">×</button>
     </div>
 
-    <label>7分類
-      <select id="categoryFilter">
-        <option value="">すべて</option>
-      </select>
-    </label>
-
     <label>細分類
       <select id="majorFilter"><option value="">すべて</option></select>
-    </label>
-
-    <label>難易度
-      <select id="difficultyFilter">
-        <option value="">すべて</option>
-        <option value="基礎">基礎</option>
-        <option value="標準">標準</option>
-        <option value="入試">入試</option>
-      </select>
-    </label>
-
-    <label>学習記録
-      <select id="resultFilter">
-        <option value="">すべて</option>
-        <option value="unanswered">未回答だけ</option>
-        <option value="correct">できただけ</option>
-        <option value="wrong">できなかった問題だけ</option>
-      </select>
     </label>
 
     <label>京都重要度
