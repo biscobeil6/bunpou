@@ -322,3 +322,47 @@ body.drawing-mode {
   color:var(--accent);
   letter-spacing:.02em;
 }
+
+
+/* ===== Version 7: iPad Safari / Apple Pencil 強化 ===== */
+html, body, .quiz, .write-card, .pad-wrap, canvas#pad {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+.pad-wrap {
+  position: relative;
+  touch-action: none !important;
+  overscroll-behavior: none !important;
+}
+
+canvas#pad {
+  touch-action: none !important;
+  -webkit-user-drag: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+.input-debug{
+  position:absolute;
+  right:7px;
+  bottom:5px;
+  z-index:5;
+  pointer-events:none;
+  font-size:9px;
+  font-weight:700;
+  color:#8d8795;
+  background:rgba(255,255,255,.82);
+  border:1px solid rgba(231,227,237,.9);
+  border-radius:999px;
+  padding:2px 6px;
+}
+
+body.pen-active,
+body.pen-active *{
+  -webkit-user-select:none !important;
+  user-select:none !important;
+  -webkit-touch-callout:none !important;
+}

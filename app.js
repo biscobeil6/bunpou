@@ -37,7 +37,7 @@
     answerCard:$("#answerCard"), answer:$("#answer"), explanation:$("#explanation"),
     answerBtn:$("#answerBtn"), prevBtn:$("#prevBtn"), nextBtn:$("#nextBtn"),
     clearBtn:$("#clearBtn"), pad:$("#pad"), writeLabel:$("#writeLabel"),
-    templateText:$("#templateText"),
+    templateText:$("#templateText"), inputDebug:$("#inputDebug"),
     correctBtn:$("#correctBtn"), wrongBtn:$("#wrongBtn"), judgeState:$("#judgeState"),
 
     settings:$("#settings"), major:$("#majorFilter"), priority:$("#priorityFilter"),
@@ -343,30 +343,69 @@
     index=ni;renderQuiz();
   }
 
+  let activePointerId = null;
+
+  function clearNativeSelection(){
+    try{
+      const sel = window.getSelection?.();
+      if(sel && sel.rangeCount) sel.removeAllRanges();
+    }catch(_){}
+  }
+
+  function setInputDebug(type, extra=""){
+    if(!els.inputDebug) return;
+    const label = type==="pen" ? "pen" : type==="touch" ? "touch" : type==="mouse" ? "mouse" : type || "不明";
+    els.inputDebug.textContent = "Pencil: " + label + (extra ? " " + extra : "");
+  }
+
+  function suppressSafari(e){
+    if(!els.quizView.classList.contains("hidden")){
+      clearNativeSelection();
+    }
+  }
+
   function setupCanvas(){
     ctx=els.pad.getContext("2d",{alpha:true});
     resizeCanvas();
 
     window.addEventListener("resize",resizeCanvas,{passive:true});
 
-    // iPad Safari / Apple Pencilでは passive:false を明示し、
-    // ブラウザのスクロール・選択・長押しメニューより描画を優先する。
+    // Canvas自身
     els.pad.addEventListener("pointerdown",startDraw,{passive:false});
     els.pad.addEventListener("pointermove",draw,{passive:false});
     els.pad.addEventListener("pointerup",endDraw,{passive:false});
-    els.pad.addEventListener("pointercancel",endDraw,{passive:false});
-    els.pad.addEventListener("lostpointercapture",endDraw,{passive:false});
+    els.pad.addEventListener("pointercancel",cancelDraw,{passive:false});
+    els.pad.addEventListener("lostpointercapture",lostCapture,{passive:false});
 
-    // Safariがcontextmenu/選択を出さないよう抑止
-    els.pad.addEventListener("contextmenu",e=>e.preventDefault());
-    els.pad.addEventListener("selectstart",e=>e.preventDefault());
+    // Pointer captureがSafari側で途切れても、windowでストロークを拾い続ける
+    window.addEventListener("pointermove",globalPointerMove,{capture:true,passive:false});
+    window.addEventListener("pointerup",globalPointerUp,{capture:true,passive:false});
+    window.addEventListener("pointercancel",globalPointerCancel,{capture:true,passive:false});
 
-    const wrap=els.pad.closest(".pad-wrap");
-    if(wrap){
-      wrap.addEventListener("contextmenu",e=>e.preventDefault());
-      wrap.addEventListener("selectstart",e=>e.preventDefault());
-      wrap.addEventListener("dragstart",e=>e.preventDefault());
-    }
+    // iPad Safariの選択・コピー・長押し対策
+    ["contextmenu","selectstart","dragstart"].forEach(type=>{
+      els.pad.addEventListener(type,e=>e.preventDefault(),{capture:true});
+      els.pad.closest(".pad-wrap")?.addEventListener(type,e=>e.preventDefault(),{capture:true});
+    });
+
+    // touch系のブラウザ既定動作も明示的に止める
+    ["touchstart","touchmove","touchend","touchcancel"].forEach(type=>{
+      els.pad.addEventListener(type,e=>{
+        e.preventDefault();
+        clearNativeSelection();
+      },{passive:false,capture:true});
+    });
+
+    document.addEventListener("selectionchange",suppressSafari,{passive:true});
+    document.addEventListener("gesturestart",e=>{
+      if(drawing){ e.preventDefault(); clearNativeSelection(); }
+    },{passive:false});
+    document.addEventListener("gesturechange",e=>{
+      if(drawing){ e.preventDefault(); clearNativeSelection(); }
+    },{passive:false});
+    document.addEventListener("gestureend",e=>{
+      if(drawing){ e.preventDefault(); clearNativeSelection(); }
+    },{passive:false});
   }
 
   function configureContext(){
@@ -381,10 +420,7 @@
   function resizeCanvas(){
     const r=els.pad.getBoundingClientRect();
     if(!r.width||!r.height)return;
-
     const dpr=Math.max(1,window.devicePixelRatio||1);
-
-    // リサイズ時だけ再初期化。通常の描画中には触らない。
     els.pad.width=Math.max(1,Math.floor(r.width*dpr));
     els.pad.height=Math.max(1,Math.floor(r.height*dpr));
     ctx=els.pad.getContext("2d",{alpha:true});
@@ -394,6 +430,11 @@
   function point(e){
     const r=els.pad.getBoundingClientRect();
     return [e.clientX-r.left,e.clientY-r.top];
+  }
+
+  function pointInsideCanvas(e){
+    const r=els.pad.getBoundingClientRect();
+    return e.clientX>=r.left && e.clientX<=r.right && e.clientY>=r.top && e.clientY<=r.bottom;
   }
 
   function drawSegment(x,y){
@@ -406,59 +447,100 @@
   }
 
   function startDraw(e){
-    if(e.button!==undefined && e.button!==0 && e.pointerType==="mouse") return;
+    if(e.pointerType==="mouse" && e.button!==0) return;
     e.preventDefault();
     e.stopPropagation();
+    clearNativeSelection();
 
     drawing=true;
-    document.body.classList.add("drawing-mode");
+    activePointerId=e.pointerId;
+    document.body.classList.add("pen-active");
+    setInputDebug(e.pointerType, "入力中");
 
     try{ els.pad.setPointerCapture(e.pointerId); }catch(_){}
 
     [lastX,lastY]=point(e);
 
-    // 点を打つだけの短いタップも残るように、ごく短い線を描く
+    // 始点
     ctx.beginPath();
-    ctx.arc(lastX,lastY,1.2,0,Math.PI*2);
+    ctx.arc(lastX,lastY,1.15,0,Math.PI*2);
     ctx.fillStyle="#2d2932";
     ctx.fill();
   }
 
-  function draw(e){
-    if(!drawing)return;
+  function renderPointerEvent(e){
+    if(!drawing || e.pointerId!==activePointerId) return;
     e.preventDefault();
-    e.stopPropagation();
+    clearNativeSelection();
 
-    // Apple Pencilは1フレームの間に複数点を持つことがある。
-    // coalesced eventsを使うと、速く書いても線が途切れにくい。
-    const events = (typeof e.getCoalescedEvents==="function")
+    const events=(typeof e.getCoalescedEvents==="function")
       ? e.getCoalescedEvents()
       : [e];
 
     for(const ev of events){
-      const [x,y]=point(ev);
+      const[x,y]=point(ev);
       drawSegment(x,y);
     }
   }
 
-  function endDraw(e){
-    if(e){
-      e.preventDefault?.();
-      e.stopPropagation?.();
-      try{
-        if(els.pad.hasPointerCapture?.(e.pointerId)){
-          els.pad.releasePointerCapture(e.pointerId);
-        }
-      }catch(_){}
-    }
+  function draw(e){
+    if(!drawing || e.pointerId!==activePointerId) return;
+    e.stopPropagation();
+    renderPointerEvent(e);
+  }
+
+  function globalPointerMove(e){
+    if(!drawing || e.pointerId!==activePointerId) return;
+    // canvasのpointermoveが来ない瞬間をwindow側で補完
+    if(!pointInsideCanvas(e)) return;
+    renderPointerEvent(e);
+  }
+
+  function finishDraw(e, cancelled=false){
+    if(!drawing) return;
+    if(e && activePointerId!==null && e.pointerId!==activePointerId) return;
+
+    e?.preventDefault?.();
+    clearNativeSelection();
+
+    try{
+      if(e && els.pad.hasPointerCapture?.(e.pointerId)){
+        els.pad.releasePointerCapture(e.pointerId);
+      }
+    }catch(_){}
+
+    const type=e?.pointerType || "";
     drawing=false;
-    document.body.classList.remove("drawing-mode");
+    activePointerId=null;
+    document.body.classList.remove("pen-active");
+    setInputDebug(type, cancelled ? "cancel" : "OK");
+  }
+
+  function endDraw(e){ finishDraw(e,false); }
+  function cancelDraw(e){ finishDraw(e,true); }
+
+  function lostCapture(e){
+    // lostpointercaptureだけでは描画終了にしない。
+    // Safariが勝手にcaptureを失ってもwindow listenerで追跡する。
+    if(drawing && e.pointerId===activePointerId){
+      setInputDebug(e.pointerType || "pen","capture継続");
+      clearNativeSelection();
+    }
+  }
+
+  function globalPointerUp(e){
+    if(drawing && e.pointerId===activePointerId) finishDraw(e,false);
+  }
+
+  function globalPointerCancel(e){
+    if(drawing && e.pointerId===activePointerId) finishDraw(e,true);
   }
 
   function clearPad(){
     if(!ctx)return;
     const r=els.pad.getBoundingClientRect();
     ctx.clearRect(0,0,r.width,r.height);
+    clearNativeSelection();
   }
 
   function openSettings(){

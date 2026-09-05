@@ -31,3 +31,11 @@ Apple Pencil安定化
 Version
 ・トップページに「Version 6 / Apple Pencil調整版」を常時表示
 ・更新版へ切り替わったかを視覚的に確認できます
+
+
+Version 7 / Pencil入力強化版
+・トップにVersion 7表示
+・手書き欄右下に入力判定（pen / touch / mouse）を表示
+・Safariがpointer captureを失ってもwindow側でストローク追跡
+・selectionchange時に文字選択を解除
+・touch/gesture/contextmenu/selectstart/dragstartを手書き欄で抑止
