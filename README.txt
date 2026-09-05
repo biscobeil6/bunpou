@@ -19,3 +19,10 @@
 文法資料
 ・講義用80項目を内蔵
 ・トップの「文法資料」から参照できます
+
+
+Apple Pencil安定化
+・iPad Safariの文字選択／コピー／長押しメニューを手書き欄で抑止
+・pointerイベントをpassive:falseで処理
+・pointer captureを使用して、欄内でのストローク継続性を改善
+・coalesced eventsに対応し、速い筆記時の線切れを軽減

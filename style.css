@@ -286,3 +286,29 @@ dialog::backdrop{background:rgba(32,27,39,.35);backdrop-filter:blur(2px)}
 @media (max-width:760px){
   .ref-card-grid{grid-template-columns:1fr}
 }
+
+
+/* ===== Apple Pencil / iPad Safari 安定化 ===== */
+.pad-wrap,
+.pad-wrap *,
+canvas#pad {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  touch-action: none !important;
+}
+
+.pad-wrap {
+  overscroll-behavior: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+
+canvas#pad {
+  cursor: crosshair;
+}
+
+/* 手書き中に周辺テキストが選択されないようにする */
+body.drawing-mode {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}

@@ -345,42 +345,116 @@
 
   function setupCanvas(){
     ctx=els.pad.getContext("2d",{alpha:true});
-    window.addEventListener("resize",resizeCanvas);
-    els.pad.addEventListener("pointerdown",startDraw);
-    els.pad.addEventListener("pointermove",draw);
-    els.pad.addEventListener("pointerup",endDraw);
-    els.pad.addEventListener("pointercancel",endDraw);
-    els.pad.addEventListener("pointerleave",e=>{if(drawing&&e.pointerType==="mouse")endDraw()});
+    resizeCanvas();
+
+    window.addEventListener("resize",resizeCanvas,{passive:true});
+
+    // iPad Safari / Apple Pencilでは passive:false を明示し、
+    // ブラウザのスクロール・選択・長押しメニューより描画を優先する。
+    els.pad.addEventListener("pointerdown",startDraw,{passive:false});
+    els.pad.addEventListener("pointermove",draw,{passive:false});
+    els.pad.addEventListener("pointerup",endDraw,{passive:false});
+    els.pad.addEventListener("pointercancel",endDraw,{passive:false});
+    els.pad.addEventListener("lostpointercapture",endDraw,{passive:false});
+
+    // Safariがcontextmenu/選択を出さないよう抑止
+    els.pad.addEventListener("contextmenu",e=>e.preventDefault());
+    els.pad.addEventListener("selectstart",e=>e.preventDefault());
+
+    const wrap=els.pad.closest(".pad-wrap");
+    if(wrap){
+      wrap.addEventListener("contextmenu",e=>e.preventDefault());
+      wrap.addEventListener("selectstart",e=>e.preventDefault());
+      wrap.addEventListener("dragstart",e=>e.preventDefault());
+    }
   }
+
   function configureContext(){
     const dpr=Math.max(1,window.devicePixelRatio||1);
     ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#2d2932";ctx.lineWidth=3;
+    ctx.lineCap="round";
+    ctx.lineJoin="round";
+    ctx.strokeStyle="#2d2932";
+    ctx.lineWidth=3;
   }
+
   function resizeCanvas(){
     const r=els.pad.getBoundingClientRect();
     if(!r.width||!r.height)return;
+
     const dpr=Math.max(1,window.devicePixelRatio||1);
-    els.pad.width=Math.floor(r.width*dpr);
-    els.pad.height=Math.floor(r.height*dpr);
+
+    // リサイズ時だけ再初期化。通常の描画中には触らない。
+    els.pad.width=Math.max(1,Math.floor(r.width*dpr));
+    els.pad.height=Math.max(1,Math.floor(r.height*dpr));
     ctx=els.pad.getContext("2d",{alpha:true});
     configureContext();
   }
+
   function point(e){
     const r=els.pad.getBoundingClientRect();
-    return[e.clientX-r.left,e.clientY-r.top];
+    return [e.clientX-r.left,e.clientY-r.top];
   }
+
+  function drawSegment(x,y){
+    ctx.beginPath();
+    ctx.moveTo(lastX,lastY);
+    ctx.lineTo(x,y);
+    ctx.stroke();
+    lastX=x;
+    lastY=y;
+  }
+
   function startDraw(e){
-    e.preventDefault();els.pad.setPointerCapture?.(e.pointerId);
-    drawing=true;[lastX,lastY]=point(e);
+    if(e.button!==undefined && e.button!==0 && e.pointerType==="mouse") return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    drawing=true;
+    document.body.classList.add("drawing-mode");
+
+    try{ els.pad.setPointerCapture(e.pointerId); }catch(_){}
+
+    [lastX,lastY]=point(e);
+
+    // 点を打つだけの短いタップも残るように、ごく短い線を描く
+    ctx.beginPath();
+    ctx.arc(lastX,lastY,1.2,0,Math.PI*2);
+    ctx.fillStyle="#2d2932";
+    ctx.fill();
   }
+
   function draw(e){
-    if(!drawing)return;e.preventDefault();
-    const[x,y]=point(e);
-    ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(x,y);ctx.stroke();
-    lastX=x;lastY=y;
+    if(!drawing)return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Apple Pencilは1フレームの間に複数点を持つことがある。
+    // coalesced eventsを使うと、速く書いても線が途切れにくい。
+    const events = (typeof e.getCoalescedEvents==="function")
+      ? e.getCoalescedEvents()
+      : [e];
+
+    for(const ev of events){
+      const [x,y]=point(ev);
+      drawSegment(x,y);
+    }
   }
-  function endDraw(){drawing=false}
+
+  function endDraw(e){
+    if(e){
+      e.preventDefault?.();
+      e.stopPropagation?.();
+      try{
+        if(els.pad.hasPointerCapture?.(e.pointerId)){
+          els.pad.releasePointerCapture(e.pointerId);
+        }
+      }catch(_){}
+    }
+    drawing=false;
+    document.body.classList.remove("drawing-mode");
+  }
+
   function clearPad(){
     if(!ctx)return;
     const r=els.pad.getBoundingClientRect();
