@@ -14,8 +14,27 @@
       <div class="eyebrow">京都府公立高校入試対策</div>
       <h1>中3 国語文法</h1>
     </div>
-    <button id="settingsBtn" class="iconbtn" aria-label="出題設定">⚙</button>
+    <button id="settingsBtn" class="settings-link" aria-label="詳細設定"><span class="gear">⚙</span><span>詳細設定</span></button>
   </header>
+
+  <!-- よく使う設定はトップに常設 -->
+  <section class="quick-controls">
+    <div class="quick-row category-scroll" id="categoryButtons"></div>
+    <div class="quick-row">
+      <select id="topResultFilter" class="quick-select" aria-label="学習記録">
+        <option value="">すべての問題</option>
+        <option value="unanswered">未回答だけ</option>
+        <option value="wrong">できなかった問題だけ</option>
+        <option value="correct">できただけ</option>
+      </select>
+      <select id="topDifficultyFilter" class="quick-select" aria-label="難易度">
+        <option value="">全難易度</option>
+        <option value="基礎">基礎</option>
+        <option value="標準">標準</option>
+        <option value="入試">入試</option>
+      </select>
+    </div>
+  </section>
 
   <section class="status">
     <span id="progress">1 / 747</span>
@@ -35,7 +54,7 @@
 
   <section class="write-card">
     <div class="write-head">
-      <span>ここに書く</span>
+      <span id="writeLabel">ここに書く</span>
       <button id="clearBtn" class="textbtn">消す</button>
     </div>
     <canvas id="pad" aria-label="手書き回答欄"></canvas>
@@ -46,7 +65,6 @@
     <div id="answer" class="answer"></div>
     <div id="explanation" class="explanation"></div>
 
-    <div class="judge-label">自己採点</div>
     <div class="judge-actions">
       <button id="correctBtn" class="judge correct">✓ できた</button>
       <button id="wrongBtn" class="judge wrong">✕ できなかった</button>
@@ -64,7 +82,7 @@
 <dialog id="settings">
   <form method="dialog" class="settings-panel">
     <div class="settings-title">
-      <h2>出題設定</h2>
+      <h2>細かい設定</h2>
       <button class="iconbtn" value="cancel" aria-label="閉じる">×</button>
     </div>
 
