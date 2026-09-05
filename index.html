@@ -19,7 +19,13 @@
 
   <section class="status">
     <span id="progress">1 / 747</span>
-    <span id="meta">基礎 ・ 言葉の単位</span>
+    <span id="meta">文・文節・単語 ・ 基礎</span>
+  </section>
+
+  <section class="mini-progress">
+    <span id="doneCount">できた 0</span>
+    <span id="wrongCount">できなかった 0</span>
+    <span id="unansweredCount">未回答 747</span>
   </section>
 
   <section class="card question-card">
@@ -39,6 +45,13 @@
     <div class="answer-label">答え</div>
     <div id="answer" class="answer"></div>
     <div id="explanation" class="explanation"></div>
+
+    <div class="judge-label">自己採点</div>
+    <div class="judge-actions">
+      <button id="correctBtn" class="judge correct">✓ できた</button>
+      <button id="wrongBtn" class="judge wrong">✕ できなかった</button>
+    </div>
+    <div id="judgeState" class="judge-state"></div>
   </section>
 
   <section class="actions">
@@ -55,7 +68,13 @@
       <button class="iconbtn" value="cancel" aria-label="閉じる">×</button>
     </div>
 
-    <label>分野
+    <label>7分類
+      <select id="categoryFilter">
+        <option value="">すべて</option>
+      </select>
+    </label>
+
+    <label>細分類
       <select id="majorFilter"><option value="">すべて</option></select>
     </label>
 
@@ -65,6 +84,15 @@
         <option value="基礎">基礎</option>
         <option value="標準">標準</option>
         <option value="入試">入試</option>
+      </select>
+    </label>
+
+    <label>学習記録
+      <select id="resultFilter">
+        <option value="">すべて</option>
+        <option value="unanswered">未回答だけ</option>
+        <option value="correct">できただけ</option>
+        <option value="wrong">できなかった問題だけ</option>
       </select>
     </label>
 
@@ -82,8 +110,11 @@
       <span>ランダム順で出題</span>
     </label>
 
+    <div class="progress-title">分類別進捗</div>
+    <div id="categoryProgress" class="category-progress"></div>
+
     <div class="settings-actions">
-      <button id="resetProgressBtn" type="button" class="danger">進捗をリセット</button>
+      <button id="resetProgressBtn" type="button" class="danger">学習記録をリセット</button>
       <button id="applyBtn" value="default" class="primary">適用</button>
     </div>
   </form>
