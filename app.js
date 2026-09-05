@@ -1,4 +1,3 @@
-
 (() => {
   const all = window.GRAMMAR_QUESTIONS || [];
   const $ = s => document.querySelector(s);
@@ -46,7 +45,7 @@
     categoryProgress:$("#categoryProgress")
   };
 
-  const STORAGE="kokugoGrammarAppV4";
+  const STORAGE="kokugoGrammarAppV5_single";
   const LEGACY=["kokugoGrammarAppV3","kokugoGrammarAppV2","kokugoGrammarAppV1"];
   let state=loadState();
   let filtered=[], index=0, ctx, drawing=false, lastX=0,lastY=0;
