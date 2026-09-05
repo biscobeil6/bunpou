@@ -26,3 +26,8 @@ Apple Pencil安定化
 ・pointerイベントをpassive:falseで処理
 ・pointer captureを使用して、欄内でのストローク継続性を改善
 ・coalesced eventsに対応し、速い筆記時の線切れを軽減
+
+
+Version
+・トップページに「Version 6 / Apple Pencil調整版」を常時表示
+・更新版へ切り替わったかを視覚的に確認できます
