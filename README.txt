@@ -39,3 +39,27 @@ Version 7 / Pencil入力強化版
 ・Safariがpointer captureを失ってもwindow側でストローク追跡
 ・selectionchange時に文字選択を解除
 ・touch/gesture/contextmenu/selectstart/dragstartを手書き欄で抑止
+
+
+VERSION 9 / Pencil実入力確認版
+・Safari/GitHub Pagesの旧ファイルキャッシュを避けるため、
+  外部ファイル名そのものをV9専用に変更
+  style-v9.css / app-v9.js / data-v9.js / lecture-data-v9.js
+・トップと問題画面にV9を表示
+・手書き欄右下：
+  読込直後「V9 JS読込済 / Pencil待機」
+  入力開始時「V9 input: pen 入力中」等へ変化
+・表示が変われば、V9のapp.jsが確実に実行されています
+
+
+VERSION 10 / 社会アプリ手書き移植版
+・ユーザーのiPadで実際に書きやすかった
+  「社会暗記アプリ v3.2 iPad手書き再修正版」の入力方式を移植
+・Pointer Events と Touch Events を両方待ち受け
+・Apple PencilがTouch Eventsのstylusとして届く場合にも対応
+・pointerrawupdate対応
+・Pointer / Touchの二重発火は開始座標と時間で重複除外
+・pointerdownが欠落してもpenのmoveからストローク復帰
+・coalesced events対応
+・Safariのselectstart / dragstart / gesturestart / contextmenuを抑止
+・トップと問題画面にV10を表示

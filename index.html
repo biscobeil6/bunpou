@@ -5,16 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f8f7fb">
 <title>中3 国語文法</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style-v10.css">
 </head>
 <body>
 <!-- ===== トップ画面 ===== -->
 <main id="homeView" class="home app">
   <header class="home-header">
     <div>
-      <div class="eyebrow">京都府公立高校入試対策・単一HTML修正版</div>
+      <div class="eyebrow">京都府公立高校入試対策・分割管理版・Pencil実入力確認</div>
       <h1>中3 国語文法</h1>
-      <div class="app-version">Version 7 / Pencil入力強化版</div>
+      <div class="app-version">VERSION 10 / 社会アプリ手書き移植版</div>
+      <div class="home-version-badge">V10</div>
     </div>
     <button id="settingsBtnHome" class="settings-link" aria-label="詳細設定">
       <span class="gear">⚙</span><span>詳細設定</span>
@@ -85,7 +86,8 @@
   <header class="quiz-header">
     <button id="homeBtn" class="back-home">⌂ トップ</button>
     <div class="quiz-title-wrap">
-      <div class="eyebrow">京都府公立高校入試対策・単一HTML修正版</div>
+      <div class="quiz-version-badge">V10</div>
+      <div class="eyebrow">京都府公立高校入試対策・分割管理版・Pencil実入力確認</div>
       <h1>中3 国語文法</h1>
     </div>
     <button id="settingsBtnQuiz" class="settings-link" aria-label="詳細設定">
@@ -117,7 +119,7 @@
     <div class="pad-wrap">
       <div id="templateText" class="template-text hidden"></div>
       <canvas id="pad" aria-label="手書き回答欄" draggable="false"></canvas>
-      <div id="inputDebug" class="input-debug">Pencil: 待機中</div>
+      <div id="inputDebug" class="input-debug">V10 HTML読込済 / JS待機</div>
     </div>
   </section>
 
@@ -174,8 +176,8 @@
     </div>
   </form>
 </dialog>
-<script src="data.js"></script>
-<script src="lecture-data.js"></script>
-<script src="app.js"></script>
+<script src="data-v10.js"></script>
+<script src="lecture-data-v10.js"></script>
+<script src="app-v10.js"></script>
 </body>
 </html>
