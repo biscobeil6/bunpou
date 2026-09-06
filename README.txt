@@ -63,3 +63,11 @@ VERSION 10 / 社会アプリ手書き移植版
 ・coalesced events対応
 ・Safariのselectstart / dragstart / gesturestart / contextmenuを抑止
 ・トップと問題画面にV10を表示
+
+
+VERSION 11 / 社会方式ライフサイクル修正版
+・V10で欠落していた国語アプリ用 resizeCanvas() を復元
+・トップ画面ではquiz canvasがhiddenのため、幅0のときは初期化を保留
+・カテゴリ選択→問題画面表示後のrequestAnimationFrameでcanvasを正しいサイズへ初期化
+・社会アプリv3.2のPointer + Touch入力方式は維持
+・V10で「手書き欄だけ無反応」になったJavaScriptエラー原因を修正
